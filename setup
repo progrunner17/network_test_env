@@ -1,0 +1,59 @@
+#!/bin/zsh
+set -eu
+
+for i in $(seq 1 1)
+do
+  sudo brctl addbr SW${i}
+done
+
+for i in $(seq 1 4)
+do
+  sudo ip netns add RT${i}
+done
+
+for i in $(seq 1 2)
+do
+  sudo ip netns add CE${i}
+done
+
+cables=(
+"RT1 CE1 192.168.1.1/24 192.168.1.254/24"
+"RT3 CE1 192.168.3.3/24 191.168.3.254/24"
+"RT2 CE2 192.168.2.2/24 192.168.2.254/24"
+"RT4 CE2 192.168.4.4/24 192.168.4.254/24"
+"RT3 RT1 172.17.13.3/24 172.17.13.1/24"
+"RT4 RT2 172.19.24.4/24 172.19.24.2/24"
+"RT4 RT3 172.18.34.4/24 172.18.34.3/24"
+"RT1 SW1 172.16.0.1/24"
+"RT2 SW1 172.16.0.2/24"
+"RT3 SW1 172.16.0.3/24"
+"RT4 SW1 172.16.0.3/24"
+)
+for cable in "${cables[@]}"
+do
+  tmp=($(echo $cable))
+  sudo ip link add ${tmp[1]}_to_${tmp[2]} type veth peer name ${tmp[2]}_to_${tmp[1]}
+  [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]] && sudo ip link set ${tmp[1]}_to_${tmp[2]} netns ${tmp[1]} up 
+  [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]] && sudo ip link set ${tmp[2]}_to_${tmp[1]} netns ${tmp[2]} up 
+done
+
+for i in $(seq 1 4)
+do
+  sudo brctl addif SW1 SW1_to_RT${i}
+  sudo ip link set SW1_to_RT${i} up
+done
+
+for cable in "${cables[@]}"
+do
+  tmp=($(echo $cable))
+  [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${tmp[1]} ip addr add ${tmp[3]} dev ${tmp[1]}_to_${tmp[2]}
+  [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${tmp[2]} ip addr add ${tmp[4]} dev ${tmp[2]}_to_${tmp[1]}
+done
+
+for host in $(echo "RT1" "RT2" "RT3" "RT4" "CE1" "CE2" )
+do
+    sudo ip netns exec ${host} ip addr add 127.0.0.1/8 dev lo
+    sudo ip netns exec ${host} ip link set lo up
+done
+
+sudo ip link set SW1 up
