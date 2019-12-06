@@ -1,3 +1,12 @@
-#!/bin/sh
+#!/bin/bash
+if [[ $# < 1 ]]; then
+  echo Usage: $0 NETNS
+  echo chose NETNS from following options
+  ls /var/run/netns
+  exit 1
+fi
 
+echo exec following command
+echo $ source prompt
 sudo ip netns exec $1 bash
+

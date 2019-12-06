@@ -1,0 +1,2 @@
+#!/bin/sh
+export PS1='\u@$('$(readlink -f $0| xargs dirname)/netns'):\w$'

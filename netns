@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+inode=$(readlink /proc/self/ns/net | sed -E 's/^.*\[([0-9]+)\]$/\1/')
+ns="$(ls -i1 /var/run/netns/ |grep $inode | cut -d' ' -f2)"
+
+if [ -z $ns ]; then
+  ns="default"
+fi
+echo $ns
+
