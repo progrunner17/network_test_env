@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PREFIX=ENV1
+PREFIX=$(readlink -f $0 |xargs dirname |xargs basename)
 nodes=(RT1 RT2 RT3 RT4 CE1 CE2)
 switches=(SW1)
 cables=(
