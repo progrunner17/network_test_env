@@ -1,0 +1,52 @@
+#!/bin/zsh
+set -eu
+
+source config
+
+for node in ${nodes[@]}
+do
+  sudo ip netns add ${PREFIX}_${node}
+done
+
+for sw in ${switches[@]}
+do
+  sudo brctl addbr ${PREFIX}_$sw
+done
+
+for cable in "${cables[@]}"
+do
+  tmp=($(echo $cable))
+  sudo ip link add ${PREFIX}_${tmp[1]}_to_${tmp[2]} type veth peer name ${PREFIX}_${tmp[2]}_to_${tmp[1]}
+  if [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]]; then
+    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[2]} netns ${PREFIX}_${tmp[1]} up
+  else
+    sudo brctl addif ${PREFIX}_${tmp[1]} ${PREFIX}_${tmp[1]}_to_${tmp[2]}
+    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[2]} up
+  fi
+
+  if [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]]; then
+    sudo ip link set ${PREFIX}_${tmp[2]}_to_${tmp[1]} netns ${PREFIX}_${tmp[2]} up
+  else
+    sudo brctl addif ${PREFIX}_${tmp[2]} ${PREFIX}_${tmp[2]}_to_${tmp[1]}
+    sudo ip link set ${PREFIX}_${tmp[2]}_to_${tmp[1]} up
+  fi
+done
+
+for cable in "${cables[@]}"
+do
+  tmp=($(echo $cable))
+  [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${PREFIX}_${tmp[1]} ip addr add ${tmp[3]} dev ${PREFIX}_${tmp[1]}_to_${tmp[2]}
+  [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${PREFIX}_${tmp[2]} ip addr add ${tmp[4]} dev ${PREFIX}_${tmp[2]}_to_${tmp[1]}
+done
+
+for node in ${nodes[@]}
+do
+  sudo ip netns exec ${PREFIX}_${node} ip addr add 127.0.0.1/8 dev lo
+  sudo ip netns exec ${PREFIX}_${node} ip link set lo up
+done
+
+for sw in ${switches[@]}
+do
+  sudo ip link set ${PREFIX}_$sw up
+done
+

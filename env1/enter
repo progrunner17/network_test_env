@@ -1,12 +1,15 @@
 #!/bin/bash
+set -eu
+source config
+
 if [[ $# < 1 ]]; then
   echo Usage: $0 NETNS
   echo chose NETNS from following options
-  ls /var/run/netns
+  echo $(ls -1 /var/run/netns | grep  $PREFIX | sed "s/${PREFIX}_//g" )
   exit 1
 fi
 
 echo exec following command
 echo $ source prompt
-sudo ip netns exec $1 bash
+sudo ip netns exec ${PREFIX}_$1 bash
 

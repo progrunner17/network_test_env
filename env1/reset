@@ -1,0 +1,28 @@
+#!/bin/bash
+set -eu
+source config
+
+devices="$(ip link show type veth |grep "_to_" |cut -d' ' -f 2 | cut -d'@' -f1| grep $PREFIX)" || :
+
+for dev in ${devices[@]}
+do
+  sudo ip link delete $dev || :
+done
+echo delete $devices
+
+switches="$(brctl show | cut -f1 | grep $PREFIX)" || :
+for sw in ${switches[@]}
+do
+sudo ip link set down $sw
+sudo brctl delbr $sw
+done
+
+echo delete $switches
+namespaces=$(sudo ip netns | cut -d' '  -f1 | grep $PREFIX) || :
+
+for ns in ${namespaces[@]}
+do
+sudo ip netns del $ns
+done
+
+echo delete $namespaces
