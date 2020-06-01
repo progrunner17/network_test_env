@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -eu
 
 source config
@@ -15,28 +15,28 @@ done
 
 for cable in "${cables[@]}"
 do
-  tmp=($(echo $cable))
-  sudo ip link add ${PREFIX}_${tmp[1]}_to_${tmp[2]} type veth peer name ${PREFIX}_${tmp[2]}_to_${tmp[1]}
-  if [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]]; then
-    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[2]} netns ${PREFIX}_${tmp[1]} up
+  tmp=(${cable})
+  sudo ip link add ${PREFIX}_${tmp[0]}_to_${tmp[1]} type veth peer name ${PREFIX}_${tmp[1]}_to_${tmp[0]}
+  if [[ "${tmp[0]}" =~ ^(RT|CE) ]]; then
+    sudo ip link set ${PREFIX}_${tmp[0]}_to_${tmp[1]} netns ${PREFIX}_${tmp[0]} up
   else
-    sudo brctl addif ${PREFIX}_${tmp[1]} ${PREFIX}_${tmp[1]}_to_${tmp[2]}
-    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[2]} up
+    sudo brctl addif ${PREFIX}_${tmp[0]} ${PREFIX}_${tmp[0]}_to_${tmp[1]}
+    sudo ip link set ${PREFIX}_${tmp[0]}_to_${tmp[1]} up
   fi
 
-  if [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]]; then
-    sudo ip link set ${PREFIX}_${tmp[2]}_to_${tmp[1]} netns ${PREFIX}_${tmp[2]} up
+  if [[ "${tmp[1]}" =~ ^(RT|CE) ]]; then
+    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[0]} netns ${PREFIX}_${tmp[1]} up
   else
-    sudo brctl addif ${PREFIX}_${tmp[2]} ${PREFIX}_${tmp[2]}_to_${tmp[1]}
-    sudo ip link set ${PREFIX}_${tmp[2]}_to_${tmp[1]} up
+    sudo brctl addif ${PREFIX}_${tmp[1]} ${PREFIX}_${tmp[1]}_to_${tmp[0]}
+    sudo ip link set ${PREFIX}_${tmp[1]}_to_${tmp[0]} up
   fi
 done
 
 for cable in "${cables[@]}"
 do
   tmp=($(echo $cable))
-  [[ "${tmp[1]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${PREFIX}_${tmp[1]} ip addr add ${tmp[3]} dev ${PREFIX}_${tmp[1]}_to_${tmp[2]}
-  [[ "${tmp[2]}" =~ "^((RT)|(CE))" ]] && sudo ip netns exec ${PREFIX}_${tmp[2]} ip addr add ${tmp[4]} dev ${PREFIX}_${tmp[2]}_to_${tmp[1]}
+  [[ "${tmp[0]}" =~ ^(RT|CE) ]] && sudo ip netns exec ${PREFIX}_${tmp[0]} ip addr add ${tmp[2]} dev ${PREFIX}_${tmp[0]}_to_${tmp[1]}
+  [[ "${tmp[1]}" =~ ^(RT|CE) ]] && sudo ip netns exec ${PREFIX}_${tmp[1]} ip addr add ${tmp[3]} dev ${PREFIX}_${tmp[1]}_to_${tmp[0]}
 done
 
 for node in ${nodes[@]}
